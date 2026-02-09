@@ -32,7 +32,6 @@ app.add_middleware(
 
 # 3. Connect to Database
 # REPLACE WITH YOUR ACTUAL MONGO STRING IF DIFFERENT
-MONGO_URI = "mongodb+srv://jmdayushkumar_db_user:6oe935cfRww7fQZP@cluster0.iii0dcr.mongodb.net/?appName=Cluster0"
 client = AsyncIOMotorClient(MONGO_URI)
 db = client.auto_ai_db
 admin_collection = db.service_centers
