@@ -8,15 +8,11 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
 MONGO_URI = os.getenv("MONGO_URI")
-DB_NAME = os.getenv("DB_NAME")
-
-client = AsyncIOMotorClient(MONGO_URI)
-db = client[DB_NAME]
-admin_collection = db.service_centers
+# Fallback if DB_NAME is not in .env, though code below hardcodes 'auto_ai_db'
+DB_NAME = os.getenv("DB_NAME", "auto_ai_db") 
 
 # 1. Initialize Independent App
 app = FastAPI()
@@ -31,9 +27,8 @@ app.add_middleware(
 )
 
 # 3. Connect to Database
-# REPLACE WITH YOUR ACTUAL MONGO STRING IF DIFFERENT
 client = AsyncIOMotorClient(MONGO_URI)
-db = client.auto_ai_db
+db = client[DB_NAME] # Uses the DB name from env or fallback
 admin_collection = db.service_centers
 
 # --- 4. DATA MODELS ---
@@ -87,28 +82,7 @@ async def register_center(center: ServiceCenter):
     result = await admin_collection.insert_one(new_center)
     return {"message": "Registered Successfully", "id": str(result.inserted_id)}
 
-# API 2: Add a Booking to a Center (Called by User App)
-# @app.post("/book-slot/{center_id}")
-# async def book_slot(center_id: str, booking: Booking):
-#     # 1. Find the center
-#     center = await admin_collection.find_one({"centerId": center_id})
-#     if not center:
-#         raise HTTPException(status_code=404, detail="Service Center Not Found")
-    
-#     # 2. Check Capacity (Simple Logic)
-#     if len(center.get("bookings", [])) >= center["capacity"]:
-#          raise HTTPException(status_code=400, detail="Center is Full for Today")
-
-#     # 3. Add Booking to the list
-#     new_booking = booking.dict()
-#     await admin_collection.update_one(
-#         {"centerId": center_id},
-#         {"$push": {"bookings": new_booking}}
-#     )
-
-#     return {"message": "Slot Booked Successfully", "booking_id": booking.booking_id}
-
-# API 3: Get All Centers (Admin View)
+# API 2: Get All Centers (Admin View)
 @app.get("/get-all-centers")
 async def get_all_centers():
     centers = []
@@ -117,10 +91,19 @@ async def get_all_centers():
         centers.append(fix_id(doc))
     return centers
 
-# API 4: Get Specific Center Details (Including Bookings)
+# API 3: Get Specific Center Details (By ID)
 @app.get("/get-center-details/{center_id}")
 async def get_center_details(center_id: str):
     center = await admin_collection.find_one({"centerId": center_id})
     if center:
         return fix_id(center)
     raise HTTPException(status_code=404, detail="Center Not Found")
+
+# ✅ NEW API 4: Get Specific Center Details (By Name)
+@app.get("/get-center-by-name/{name}")
+async def get_center_by_name(name: str):
+    # Uses regex for case-insensitive search
+    center = await admin_collection.find_one({"name": {"$regex": f"^{name}$", "$options": "i"}})
+    if center:
+        return fix_id(center)
+    raise HTTPException(status_code=404, detail="Service Center with this name not found")
