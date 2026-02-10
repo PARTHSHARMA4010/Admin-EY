@@ -214,3 +214,13 @@ async def get_vendor_analytics(vendor_id: str):
         "total_failures_detected": total_failures,
         "batches_analyzed": len(batches)
     }
+
+# API 9: Get All Vendors (For Dropdowns)
+@app.get("/get-all-vendors")
+async def get_all_vendors():
+    vendors = []
+    # Fetch all vendors from the DB
+    cursor = vendor_collection.find({})
+    async for doc in cursor:
+        vendors.append(fix_id(doc))
+    return vendors
