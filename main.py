@@ -37,6 +37,7 @@ batch_collection = db.batches           # ✅ NEW: Stores Supply Batches
 # --- 4. DATA MODELS ---
 
 # --- A. EXISTING MODELS (Service Center) ---
+# --- A. EXISTING MODELS (Service Center) ---
 class Booking(BaseModel):
     booking_id: str
     vehicle_id: str
@@ -53,6 +54,7 @@ class Booking(BaseModel):
 class ServiceCenter(BaseModel):
     centerId: str           
     name: str               
+    company_name: str       # ✅ NEW FIELD ADDED HERE
     location: str           
     phone: str              
     capacity: int           
@@ -62,13 +64,27 @@ class ServiceCenter(BaseModel):
 
 # --- B. NEW MODELS (Vendor & Supply Chain) ---
 
+# 1. Helper Model for Contact Info
+class VendorContact(BaseModel):
+    email: str
+
+# 2. Helper Model for the detailed metrics object
+class LocalMetrics(BaseModel):
+    durability_score: float = 100.0
+    company_local_rating: float
+    total_jobs: int
+    failed_jobs: int
+    avg_response_time: int
+    company_reviews: List[str] = []
+    avg_rating: float
+
+# 3. Updated Vendor Model (Matches your new JSON)
 class Vendor(BaseModel):
     vendor_id: str          # e.g., "V-DENSO-09"
     name: str               # e.g., "Denso Corporation"
     category: str           # e.g., "Electronics"
-    contact: str
-    # Performance is calculated dynamically, but we can store a snapshot
-    durability_score: float = 100.0 
+    contact: VendorContact  # Now a nested object
+    local_metrics: LocalMetrics # Now a nested object
 
 class BatchPart(BaseModel):
     part_sku: str           # e.g., "90919-01191"
@@ -83,6 +99,7 @@ class BatchAllocation(BaseModel):
     batch_info: Dict         # Stores dates/batch numbers
     parts_manifest: List[BatchPart] # The list of parts in this box
 
+    
 # --- HELPER FUNCTION ---
 def fix_id(document):
     if document:
